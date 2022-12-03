@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html class="h-100" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootswatch@5.2.2/dist/cosmo/bootstrap.min.css"
+      integrity="sha256-5t++JZpgVLzo9vF7snO5Qw0y3fA5/NkoJENWB7kpg0E="
+      crossorigin="anonymous"
+    />
+
+    <title>Cytoscape CSV</title>
+  </head>
+
+  <body class="d-flex flex-column h-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <section class="container-fluid">
+        <span class="navbar-brand me-auto">Cytoscape CSV</span>
+        <button
+          id="ResetGraphDOM"
+          type="button"
+          class="btn btn-outline-primary"
+        >
+          Reset layout
+        </button>
+      </section>
+    </nav>
+
+    <main id="GraphDOM" class="container-fluid flex-grow-1"></main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js"
+      integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/jquery-csv@1.0.21/src/jquery.csv.min.js"
+      integrity="sha256-zGo0JbZ5Sn6wU76MyVL0TrUZUq5GLXaFnMQCe/hSwVI="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha256-lSABj6XYH05NydBq+1dvkMu6uiCc/MbLYOFGRkf3iQs="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/cytoscape@3.23.0/dist/cytoscape.min.js"
+      integrity="sha256-Yn3in5rzK4jMdZDc/68KVzrvpdf3GT39ziTYR5msP7c="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var DOM = {},
+          Bundle = {};
+
+        DOM.graph = jQuery("#GraphDOM");
+        DOM.resetGraph = jQuery("#ResetGraphDOM");
+
+        Bundle.graph = cytoscape({ container: DOM.graph });
+
+        function bindResetGraphLayout() {
+          DOM.resetGraph.on("click", (event) => {
+            event.preventDefault();
+            resetGraphLayout();
+          });
+        }
+
+        function resetGraphLayout() {
+          Bundle.graph.layout({ name: "cose" }).run();
+        }
+
+        function initGraph() {
+          // bind a node "click" handler
+          Bundle.graph.on("tap", "node", (event) => {
+            var node = event.target;
+            alert(JSON.stringify(node.data()));
+          });
+          // apply node styling
+          Bundle.graph
+            .style()
+            .selector("node")
+            .style({
+              // display a center-aligned label
+              label: "data(label)",
+              "text-valign": "center",
+              "text-halign": "center",
+              // theme the label
+              color: "#f2f2f2",
+              "text-outline-color": "#313131",
+              "text-outline-width": 2,
+              // theme the node
+              "background-color": "#7a86b8",
+              "border-color": "#586084",
+              "border-width": 2,
+            })
+            .selector("edge")
+            .style({
+              "curve-style": "bezier",
+              "target-arrow-shape": "triangle",
+            })
+            .update();
+        }
+
+        function fetchNodes() {
+          return fetch("./data/nodes.csv")
+            .then((response) => response.text())
+            .then(jQuery.csv.toObjects);
+        }
+
+        function fetchEdges() {
+          return fetch("./data/edges.csv")
+            .then((response) => response.text())
+            .then(jQuery.csv.toObjects);
+        }
+
+        function addNodes(nodes) {
+          nodes.forEach((n) => {
+            Bundle.graph.add({
+              group: "nodes",
+              data: {
+                id: parseInt(n.id, 10),
+                label: n.label,
+              },
+            });
+          });
+        }
+
+        function addEdges(edges) {
+          edges.forEach((e) => {
+            Bundle.graph.add({
+              group: "edges",
+              data: {
+                source: parseInt(e.source_id, 10),
+                target: parseInt(e.target_id, 10),
+              },
+            });
+          });
+        }
+
+        jQuery(function () {
+          initGraph();
+          bindResetGraphLayout();
+
+          fetchNodes()
+            .then(addNodes)
+            .then(fetchEdges)
+            .then(addEdges)
+            .catch((error) => console.log(error))
+            .finally(resetGraphLayout);
+        });
+      })();
+    </script>
+  </body>
+</html>
