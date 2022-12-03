@@ -1,1 +1,1 @@
-# cytoscape-csv
+# Cytoscape CSV
